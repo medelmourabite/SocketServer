@@ -519,7 +519,7 @@ function arraysEqual(arr1, arr2) {
 
 
 
-var port = process.env.PORT || 18888;
+var port = process.env.PORT || 8888;
 var host = "http://localhost:";
 
 
@@ -527,6 +527,6 @@ http.listen(port, function() {
   console.log("http://localhost:" + port);
 });
 
-app.get('/', (res ,req) => {
-  res.send("Listening " + port);
-});
+// app.get('/', (res ,req) => {
+//   res.send("Listening " + port);
+// });

@@ -4,8 +4,8 @@
   "description": "this will serve as a server for my ionic chat app",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-    "start" "node index.js"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node index.js"
   },
   "author": "MedEM",
   "license": "ISC",
