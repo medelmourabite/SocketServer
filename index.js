@@ -4,6 +4,7 @@ var io = require("socket.io")(http);
 var SpellChecker = require("simple-spellchecker");
 var admin = require("firebase-admin");
 var randomWords = require('random-words');
+var app = require("express");
 
 var config = require("./chat-eng-game-firebase.json");
 
@@ -520,6 +521,12 @@ function arraysEqual(arr1, arr2) {
 
 var port = process.env.PORT || 18888;
 var host = "http://localhost:";
+
+
 http.listen(port, function() {
   console.log("http://localhost:" + port);
+});
+
+app.get('/', (res ,req) => {
+  res.send("Listening " + port);
 });
