@@ -299,7 +299,7 @@ function checkAnswer(message, room, cb) {
         title: "correct",
         text: "The answer is << " + answer + " >>",
         player: message.from,
-        gain: 1 + levels[room] * levels[room]
+        gain: 1 + Math.floor(Math.pow((randomQuestion[room].level + 1),1.6)) 
       }
     });
   } else {
@@ -440,7 +440,7 @@ function checkLastWord(message, room, cb){
         title: "correct",
         text: "Well done",
         player: message.from,
-        gain: 5
+        gain: 6
       }
     });
   } else {
@@ -477,7 +477,7 @@ function checkLastLeter(message, room, cb){
         title: "correct",
         text: "Well done",
         player: message.from,
-        gain: 2
+        gain: 3
       }
     });
   } else {
