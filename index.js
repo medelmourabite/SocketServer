@@ -75,8 +75,11 @@ io.on("connection", client => {
                 players[data.room] = [];
                 if(s.val()){
                   Object.keys(s.val()).forEach(player => {
-                    players[data.room].push(player);
+                    if(s.val()[player]['state'] == 'online'){
+                      players[data.room].push(player);  
+                    }
                   });
+                  setTimeout(function(){chouseRandomPlayer(data.room)},500);
                 }else{
                   waiting[data.room] = false;
                   wrongAnswer[data.room] = null;
@@ -88,7 +91,7 @@ io.on("connection", client => {
                 sendImprov(data.room);
               }, 2000);
             }
-            if(!games[data.room].quiz && !games[data.room].story){
+            if((games[data.room] && !games[data.room].quiz && !games[data.room].story) || !games[data.room]){
               waiting[data.room] = false;
               wrongAnswer[data.room] = 0;
             }
@@ -136,15 +139,16 @@ io.on("connection", client => {
 
 
   client.on("correct_message", data => {
-    console.log("GAMES",games[data.room]);
     if(games[data.room] ){
 
         if (games[data.room].quiz && waiting[data.room]) {
           checkAnswer(data.message, data.room, ret => {
             if (ret.ok == "wrong") {
               wrongAnswer[data.room]++;
-              waiting[data.room] = wrongAnswer[data.room] < 2;
-              if(wrongAnswer[data.room] >= 2){
+              waiting[data.room] = wrongAnswer[data.room] < 3;
+              console.log('wrong answers', wrongAnswer[data.room])
+              if(wrongAnswer[data.room] >= 3){
+                console.log('correct', wrongAnswer[data.room])
                 io.to(data.room).emit("wrong", {
                   title: randomQuestion[data.room].answer,
                   text: "The correct answer is",
@@ -160,7 +164,6 @@ io.on("connection", client => {
         } else if (games[data.room].quiz && !waiting[data.room]) {
           prepareAsking(data.room);
         }else if(games[data.room].story && waiting[data.room]){
-          console.log("story MODE");
             checkImprov(data.message, data.room, ret => {
               if (ret.ok == "wrong") {
                 wrongAnswer[data.room]++;
@@ -171,7 +174,6 @@ io.on("connection", client => {
               showResult(client,data.room,ret);
           });
         }else if(games[data.room].startWithEnd){
-          console.log("startWithEnd");
           checkEndStart(data.message, data.room, ret => {
             showResult(client,data.room,ret);
             lastWord[data.room] = ret.lastWord;
@@ -283,7 +285,7 @@ function getRandom(level, cb) {
   while (true) {
     q = questions[Math.floor(Math.random() * questions.length)];
     // q = questions[1];
-    if (q && q.level <= level) {
+    if (q && q.level && q.level <= level) {
       break;
     }
   }
@@ -299,7 +301,7 @@ function checkAnswer(message, room, cb) {
         title: "correct",
         text: "The answer is << " + answer + " >>",
         player: message.from,
-        gain: 1 + Math.floor(Math.pow((randomQuestion[room].level + 1),1.6)) 
+        gain: Math.floor(Math.pow((randomQuestion[room].level + 1),1.6)) 
       }
     });
   } else {
@@ -335,7 +337,6 @@ function getRandomFirstLine(genre, cb) {
 
 function chouseRandomPlayer(room){
   var r = players[room][Math.floor(Math.random() * players[room].length)]
-  console.log(r);
   io.to(room).emit('your_turn', {uid: r});
 }
 
@@ -344,7 +345,6 @@ function sendImprov(room){
   var count = 0;
   var interval = setInterval(() => {
 
-    console.log('interval', count);
     if(games[room] && !games[room].story){
       waiting[room] = false;
       clearInterval(interval);
@@ -352,11 +352,10 @@ function sendImprov(room){
     if((!waiting[room] && count > 15) ||count > 30)
     {
       improv[room] = randomWords({min: 2, max: 4, formatter: (word)=> word.toLowerCase()});
-      console.log("WORDS" , improv[room]);
       sendMessage( room,'Next words are :\n' + improv[room] , 10000);
-      chouseRandomPlayer(room);
       waiting[room] = true;
       count = 0;
+      chouseRandomPlayer(room);
     }
     count++;
   }, 2000);
@@ -366,7 +365,6 @@ function sendImprov(room){
 
 
 function checkImprov(message, room, cb){
-  console.log("Cheking",improv[room])
   if(!improv[room]) return;
   var wordsTmp = message.text
           .replace(/[,.*+?^${}()|[\]\\\n\t]/g, " ")
@@ -430,7 +428,6 @@ function checkLastWord(message, room, cb){
       lastWord[room] = wordsTmp[wordsTmp.length -1];
       return;
     }
-    console.log(lastWord[room]);
   
   if (lastWord[room].toLowerCase() == wordsTmp[0].toLowerCase()) {
     cb({
@@ -467,7 +464,6 @@ function checkLastLeter(message, room, cb){
       lastWord[room] = newLast;
       return;
     }
-    console.log(lastWord[room]);
   
   if (lastWord[room].toLowerCase() == leter.toLowerCase()) {
     cb({
