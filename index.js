@@ -16,6 +16,13 @@ admin.initializeApp({
 var db = admin.database();
 var refQuestions = db.ref("games/quiz/questions/");
 var refFirstLines = db.ref("games/story/firstLines/");
+var refParams = db.ref("params/");
+var refPlayers = db.ref("players/");
+
+var params;
+
+var lastPlayer = [];
+
 
 var refRooms = db.ref("rooms/");
 var questions = [];
@@ -28,6 +35,11 @@ refQuestions.on("value", s => {
   questions = snapShotToArray(s);
 });
 
+refParams.on("value", s => {
+  params = s.val();
+  console.log(params);
+});
+
 refFirstLines.on("value", s => {
   firstLines = snapShotToArray(s);
 });
@@ -35,6 +47,8 @@ refFirstLines.on("value", s => {
 var games = [];
 var levels = [];
 var players = [];
+var tmpPlayers = [];
+
 var wrongAnswer = [];
 var typing = [];
 
@@ -66,7 +80,6 @@ io.on("connection", client => {
             }
 
             if(games[data.room].story && !waiting[data.room]){
-              console.log(games[data.room].story);
               getRandomFirstLine(games[data.room].story, fl => {
                 sendMessage(data.room ,"Can you begin with: << " +fl.text + " >>" ,100000 );
               });
@@ -75,9 +88,12 @@ io.on("connection", client => {
                 players[data.room] = [];
                 if(s.val()){
                   Object.keys(s.val()).forEach(player => {
-                    if(s.val()[player]['state'] == 'online'){
-                      players[data.room].push(player);  
-                    }
+                    refPlayers.child(player + '/state/').once('value', s => {
+                      console.log(player ,s.val());
+                      if(s.val() == 'online'){
+                        players[data.room].push(player);
+                      }
+                    });
                   });
                   setTimeout(function(){chouseRandomPlayer(data.room)},500);
                 }else{
@@ -146,12 +162,10 @@ io.on("connection", client => {
             if (ret.ok == "wrong") {
               wrongAnswer[data.room]++;
               waiting[data.room] = wrongAnswer[data.room] < 3;
-              console.log('wrong answers', wrongAnswer[data.room])
-              if(wrongAnswer[data.room] >= 3){
-                console.log('correct', wrongAnswer[data.room])
+              if(!waiting[data.room]){
                 io.to(data.room).emit("wrong", {
                   title: randomQuestion[data.room].answer,
-                  text: "The correct answer is",
+                  text: "The correct answer is ",
                   gain: 0
                 });
               }
@@ -251,7 +265,7 @@ function prepareAsking(room) {
     return;
   }
   preparing[room] = true;
-  var timeOut = Math.floor(Math.random() * 10 + 2);
+  var timeOut = Math.floor(Math.random() * 60 + (params ? params.minTime : 30));
   var message = {
     title: "ready",
     text: "next question in " + timeOut + " seconds",
@@ -336,7 +350,23 @@ function getRandomFirstLine(genre, cb) {
 }
 
 function chouseRandomPlayer(room){
-  var r = players[room][Math.floor(Math.random() * players[room].length)]
+  console.log(players[room], tmpPlayers[room]);
+  do{
+    if(!players[room] || players[room].length <= 0)
+      break;
+    if(!tmpPlayers || tmpPlayers.length <= 0){
+      tmpPlayers[room] = [];
+      players[room].forEach(item => {
+        tmpPlayers[room].push(item);
+      });
+    }
+    var r = tmpPlayers[room][Math.floor(Math.random() * tmpPlayers[room].length)];
+  }while(!r || players[room].indexOf(r) <= -1)
+  var index = tmpPlayers.indexOf(r);
+  if (index > -1) {
+    tmpPlayers.splice(index, 1);
+  }
+  console.log(tmpPlayers);
   io.to(room).emit('your_turn', {uid: r});
 }
 
@@ -349,7 +379,7 @@ function sendImprov(room){
       waiting[room] = false;
       clearInterval(interval);
     }
-    if((!waiting[room] && count > 15) ||count > 30)
+    if((!waiting[room] && count > (params ? params.minTime : 30)) ||count > (params ? params.timeOut : 60))
     {
       improv[room] = randomWords({min: 2, max: 4, formatter: (word)=> word.toLowerCase()});
       sendMessage( room,'Next words are :\n' + improv[room] , 10000);
@@ -358,7 +388,7 @@ function sendImprov(room){
       chouseRandomPlayer(room);
     }
     count++;
-  }, 2000);
+  }, 1000);
 }
 
 
