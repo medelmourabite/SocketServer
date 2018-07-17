@@ -385,7 +385,9 @@ function sendImprov(room){
       sendMessage( room,'Next words are :\n' + improv[room] , 10000);
       waiting[room] = true;
       count = 0;
-      chouseRandomPlayer(room);
+      setTimeout(function() {
+        chouseRandomPlayer(room);
+      }, 800);
     }
     count++;
   }, 1000);
