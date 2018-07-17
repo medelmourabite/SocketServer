@@ -89,7 +89,6 @@ io.on("connection", client => {
                 if(s.val()){
                   Object.keys(s.val()).forEach(player => {
                     refPlayers.child(player + '/state/').once('value', s => {
-                      console.log(player ,s.val());
                       if(s.val() == 'online'){
                         players[data.room].push(player);
                       }
@@ -181,7 +180,7 @@ io.on("connection", client => {
             checkImprov(data.message, data.room, ret => {
               if (ret.ok == "wrong") {
                 wrongAnswer[data.room]++;
-                waiting[data.room] = wrongAnswer[data.room] < 2;
+                waiting[data.room] = wrongAnswer[data.room] < 3;
               } else if (ret.ok == "correct") {
                 waiting[data.room] = false;
               }
@@ -265,7 +264,7 @@ function prepareAsking(room) {
     return;
   }
   preparing[room] = true;
-  var timeOut = Math.floor(Math.random() * 60 + (params ? params.minTime : 30));
+  var timeOut = Math.floor(Math.random() *(params ? params.minTime : 60) + (params ? params.minTime : 30));
   var message = {
     title: "ready",
     text: "next question in " + timeOut + " seconds",
@@ -350,7 +349,6 @@ function getRandomFirstLine(genre, cb) {
 }
 
 function chouseRandomPlayer(room){
-  console.log(players[room], tmpPlayers[room]);
   do{
     if(!players[room] || players[room].length <= 0)
       break;
@@ -366,7 +364,6 @@ function chouseRandomPlayer(room){
   if (index > -1) {
     tmpPlayers.splice(index, 1);
   }
-  console.log(tmpPlayers);
   io.to(room).emit('your_turn', {uid: r});
 }
 
@@ -379,7 +376,8 @@ function sendImprov(room){
       waiting[room] = false;
       clearInterval(interval);
     }
-    if((!waiting[room] && count > (params ? params.minTime : 30)) ||count > (params ? params.timeOut : 60))
+    // if((!waiting[room] && count > (params ? params.minTime : 10)) || count > (params ? params.timeOut : 30))
+    if(!waiting[room] || count > (params ? params.timeOut : 30))
     {
       improv[room] = randomWords({min: 2, max: 4, formatter: (word)=> word.toLowerCase()});
       sendMessage( room,'Next words are :\n' + improv[room] , 10000);
